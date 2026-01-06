@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - LEMON_WEBHOOK_SECRET=${LEMON_WEBHOOK_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
