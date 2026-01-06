@@ -95,13 +95,11 @@ licenseRouter.post('/activate', async (req: Request, res: Response) => {
 
     // 计算过期时间
     let expiresAt = null;
-    if (license.type === 'subscription') {
-      // 订阅版：1 年后过期
-      const expires = new Date();
-      expires.setFullYear(expires.getFullYear() + 1);
-      expiresAt = expires.toISOString();
+    if (license.type === 'trial' || license.type === 'monthly' || license.type === 'yearly') {
+      // 非终身版：使用数据库中的过期时间
+      expiresAt = license.expires_at;
     }
-    // 买断版：永不过期
+    // 终身版：永不过期
 
     res.json({
       success: true,
