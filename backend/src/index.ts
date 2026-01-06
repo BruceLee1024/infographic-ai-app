@@ -5,6 +5,7 @@ import { webhookRouter } from './routes/webhook';
 import { subscriptionRouter } from './routes/subscription';
 import { paymentRouter } from './routes/payment';
 import { licenseRouter } from './routes/license';
+import { adminRouter } from './routes/admin';
 import { initDatabase } from './db/init';
 
 // 加载环境变量
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/license', licenseRouter);
+app.use('/admin', adminRouter);
 
 // 错误处理
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
