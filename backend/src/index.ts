@@ -21,17 +21,19 @@ initDatabase();
 const allowedOrigins = [
   'http://localhost:5173',
   'https://infographic-ai-app.vercel.app',
+  'https://infographic-ai-app-production.up.railway.app',
   process.env.FRONTEND_URL,
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // 允许没有 origin 的请求（如 Postman）
+    // 允许没有 origin 的请求（如同源请求、Postman）
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
