@@ -326,16 +326,21 @@ router.post('/generate', async (req, res) => {
   try {
     const { type, email, note } = req.body;
     
+    console.log('Generating license:', { type, email, note });
+    
     if (!type || !['trial', 'monthly', 'yearly', 'lifetime'].includes(type)) {
       return res.status(400).json({ error: '无效的激活码类型' });
     }
     
     const license = await generateLicense(type, email, note);
     
+    console.log('License generated:', license);
+    
     res.json(license);
   } catch (error: any) {
     console.error('生成激活码失败:', error);
-    res.status(500).json({ error: error.message || '生成激活码失败' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: error.message || '生成激活码失败', stack: error.stack });
   }
 });
 

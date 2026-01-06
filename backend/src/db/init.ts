@@ -5,22 +5,37 @@ import fs from 'fs';
 // Railway 使用 /tmp 目录存储临时文件
 const DB_PATH = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'production' ? '/tmp/infographic.db' : './data/infographic.db');
 
+console.log('Database path:', DB_PATH);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 // 确保数据目录存在
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
   try {
     fs.mkdirSync(dbDir, { recursive: true });
+    console.log('Created database directory:', dbDir);
   } catch (error) {
     console.error('Failed to create database directory:', error);
   }
 }
 
 // 创建数据库连接
-export const db = new Database(DB_PATH);
+let db: Database.Database;
+try {
+  db = new Database(DB_PATH);
+  console.log('Database connection established');
+} catch (error) {
+  console.error('Failed to create database:', error);
+  throw error;
+}
+
+export { db };
 
 // 初始化数据库表
 export function initDatabase() {
   console.log('📦 Initializing database at:', DB_PATH);
+  
+  try {
 
   // 用户表
   db.exec(`
@@ -106,7 +121,11 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status);
   `);
 
-  console.log('✅ Database initialized successfully');
+    console.log('✅ Database initialized successfully');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    throw error;
+  }
 }
 
 // 辅助函数：生成 UUID
