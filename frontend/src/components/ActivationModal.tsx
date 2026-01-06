@@ -122,7 +122,7 @@ export const ActivationModal = ({ visible, onClose, onActivated }: ActivationMod
             扫描下方二维码或搜索微信号
           </Text>
 
-          {/* 微信二维码占位符 */}
+          {/* 微信二维码 */}
           <div style={{
             width: 200,
             height: 200,
@@ -130,23 +130,19 @@ export const ActivationModal = ({ visible, onClose, onActivated }: ActivationMod
             background: '#fff',
             border: '2px solid #e8e8e8',
             borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 14,
-            color: '#999'
+            overflow: 'hidden'
           }}>
-            {/* 这里放置你的微信二维码图片 */}
-            <div style={{ textAlign: 'center', padding: 20 }}>
-              <WechatOutlined style={{ fontSize: 48, color: '#e8e8e8', marginBottom: 8 }} />
-              <div>请替换为你的微信二维码</div>
-            </div>
+            <img 
+              src="/wechat-qrcode.png" 
+              alt="微信二维码" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
 
           <Paragraph style={{ margin: 0, fontSize: 14 }}>
             <Text type="secondary">微信号：</Text>
             <Text strong copyable style={{ color: '#07c160' }}>
-              your_wechat_id
+              Changning_Lee
             </Text>
           </Paragraph>
 

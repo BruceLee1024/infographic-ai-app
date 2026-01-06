@@ -125,12 +125,12 @@
 <Paragraph style={{ margin: 0, fontSize: 14 }}>
   <Text type="secondary">微信号：</Text>
   <Text strong copyable style={{ color: '#07c160' }}>
-    your_wechat_id
+    Changning_Lee
   </Text>
 </Paragraph>
 ```
 
-将 `your_wechat_id` 替换为你的真实微信号。
+将 `Changning_Lee` 替换为你的真实微信号（已更新为示例微信号）。
 
 ---
 
@@ -259,14 +259,14 @@ A: 在数据库中修改 `expiresAt` 字段
 ### 联系方式
 
 用户可以通过以下方式联系：
-- 微信：[你的微信号]
+- 微信：Changning_Lee
 - 邮箱：[你的邮箱]
 
 ---
 
 ## 🎯 下一步
 
-1. ✅ 替换微信二维码和微信号
+1. ✅ 替换微信二维码和微信号（已完成：Changning_Lee）
 2. ✅ 部署后端和前端
 3. ✅ 测试激活流程
 4. ✅ 生成真实激活码
