@@ -81,9 +81,11 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS licenses (
       id TEXT PRIMARY KEY,
       license_key TEXT UNIQUE NOT NULL,
-      type TEXT CHECK(type IN ('subscription', 'lifetime')) NOT NULL,
+      type TEXT CHECK(type IN ('trial', 'monthly', 'yearly', 'lifetime')) NOT NULL,
       status TEXT CHECK(status IN ('active', 'used', 'expired')) DEFAULT 'active',
       user_email TEXT,
+      email TEXT,
+      note TEXT,
       activated_at TEXT,
       expires_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
