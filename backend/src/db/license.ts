@@ -1,6 +1,20 @@
 import { db, generateId } from './init';
 import crypto from 'crypto';
 
+// 数据库记录类型
+interface LicenseRecord {
+  id: string;
+  license_key: string;
+  type: string;
+  status: string;
+  user_email: string | null;
+  email: string | null;
+  note: string | null;
+  activated_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
 /**
  * 生成激活码
  */
@@ -79,7 +93,7 @@ export async function generateLicense(
 export function validateLicense(code: string) {
   const license = db.prepare(`
     SELECT * FROM licenses WHERE license_key = ?
-  `).get(code);
+  `).get(code) as LicenseRecord | undefined;
 
   if (!license) {
     return { valid: false, message: '激活码不存在' };
