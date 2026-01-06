@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
-    "@antv/infographic": "file:../../Infographic",
+    "@antv/infographic": "file:./infographic-package",
     "@monaco-editor/react": "^4.7.0",
     "antd": "^5.27.4",
     "react": "^19.1.1",

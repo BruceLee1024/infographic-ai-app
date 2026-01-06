@@ -1,0 +1,205 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.embedFonts = embedFonts;
+exports.parseFontFamily = parseFontFamily;
+exports.getActualLoadedFontFace = getActualLoadedFontFace;
+// @ts-expect-error ignore
+const parse_1 = __importDefault(require("css/lib/parse"));
+const renderer_1 = require("../renderer");
+const utils_1 = require("../utils");
+async function embedFonts(svg, embedResources = true) {
+    // 1. 收集使用到的 font-family
+    const usedFonts = collectUsedFonts(svg);
+    if (usedFonts.size === 0)
+        return;
+    const parsedFontsFaces = [];
+    // 2. 对每个使用到的字体，解析 CSS + 结合 document.fonts 的实际加载子集
+    await Promise.all(Array.from(usedFonts).map(async (fontFamily) => {
+        const loadedFonts = getActualLoadedFontFace(fontFamily);
+        if (!loadedFonts.length)
+            return;
+        const cssFontFaces = await parseFontFamily(fontFamily);
+        if (!cssFontFaces.length)
+            return;
+        const processed = await Promise.all(cssFontFaces.map(async (rawFace) => {
+            const fontFace = normalizeFontFace(rawFace);
+            const unicodeRange = fontFace['unicode-range'].replace(/\s/g, '');
+            const subset = loadedFonts.find((font) => font.unicodeRange &&
+                font.unicodeRange.replace(/\s/g, '') === unicodeRange);
+            // 如果找不到对应子集，就不处理这个 font-face
+            if (!subset)
+                return null;
+            const baseURL = (0, renderer_1.getWoff2BaseURL)(fontFace['font-family'], (0, utils_1.normalizeFontWeightName)(fontFace['font-weight']));
+            if (!baseURL)
+                return null;
+            // 更宽松地从 src 中提取 .woff2 URL 片段
+            const urlMatch = fontFace.src.match(/url\(["']?(.*?\.woff2)[^"']*["']?\)/);
+            if (!urlMatch?.[1])
+                return null;
+            const woff2URL = (0, utils_1.join)(baseURL, urlMatch[1]);
+            if (embedResources) {
+                const woff2DataUrl = await loadWoff2(woff2URL);
+                fontFace.src = `url(${woff2DataUrl}) format('woff2')`;
+            }
+            else {
+                fontFace.src = `url(${woff2URL}) format('woff2')`;
+            }
+            return fontFace;
+        }));
+        parsedFontsFaces.push(...(processed.filter(Boolean) || []));
+    }));
+    // 3. 创建 <style>@font-face...</style> 并插入 SVG
+    if (parsedFontsFaces.length > 0) {
+        insertFontStyle(svg, parsedFontsFaces);
+    }
+}
+/**
+ * 收集 SVG 中用到的 font-family
+ */
+function collectUsedFonts(svg) {
+    const usedFonts = new Set();
+    const svgFontFamily = svg.getAttribute('font-family');
+    if (svgFontFamily) {
+        const decodedFontFamily = (0, utils_1.decodeFontFamily)(svgFontFamily);
+        if (decodedFontFamily) {
+            usedFonts.add(decodedFontFamily);
+        }
+    }
+    const textElements = svg.querySelectorAll('foreignObject span');
+    for (const span of textElements) {
+        const fontFamily = (0, utils_1.decodeFontFamily)(span.style.fontFamily);
+        if (fontFamily)
+            usedFonts.add(fontFamily);
+    }
+    return usedFonts;
+}
+/**
+ * 解析给定 font-family 对应的 CSS @font-face
+ */
+async function parseFontFamily(fontFamily) {
+    const urls = (0, renderer_1.getFontURLs)(fontFamily);
+    const fontFaces = [];
+    await Promise.allSettled(urls.map(async (url) => {
+        const css = await (0, utils_1.fetchWithCache)(url)
+            .then((res) => res.text())
+            .then((text) => (0, parse_1.default)(text))
+            .catch(() => {
+            console.error(`Failed to fetch or parse font CSS: ${url}`);
+            return null;
+        });
+        css?.stylesheet?.rules.forEach((rule) => {
+            if (rule.type === 'font-face') {
+                const fontFace = parseFontFace(rule);
+                fontFaces.push(fontFace);
+            }
+        });
+    }));
+    return fontFaces;
+}
+/**
+ * 从 document.fonts 中获取给定 family 且已加载的 FontFace
+ */
+function getActualLoadedFontFace(fontFamily) {
+    const fonts = [];
+    document.fonts.forEach((font) => {
+        if ((0, utils_1.decodeFontFamily)(font.family) === (0, utils_1.decodeFontFamily)(fontFamily) &&
+            font.status === 'loaded') {
+            fonts.push(font);
+        }
+    });
+    return fonts;
+}
+/**
+ * 从 css 的 FontFace 规则中提取声明
+ */
+function parseFontFace(rule) {
+    const declarations = (rule.declarations || []);
+    const attrs = {};
+    declarations.forEach((declaration) => {
+        const { property, value } = declaration;
+        if (property && value) {
+            attrs[property] = value;
+        }
+    });
+    // 这里返回 Partial，后面统一 normalize
+    return attrs;
+}
+/**
+ * 将不完整的 FontFaceAttributes 补全为完整结构，给后续逻辑使用
+ */
+function normalizeFontFace(face) {
+    return {
+        'font-family': face['font-family'] ?? '',
+        src: face.src ?? '',
+        'font-style': face['font-style'] ?? 'normal',
+        'font-display': face['font-display'] ?? 'swap',
+        'font-weight': face['font-weight'] ?? '400',
+        'unicode-range': face['unicode-range'] ?? 'U+0-FFFF',
+    };
+}
+/**
+ * 将 @font-face 写入 <style>，插入到 SVG 中合适的位置
+ */
+function insertFontStyle(svg, fontFaces) {
+    // 简单去重：相同 family + weight + style + unicode-range + src 只保留一条
+    const unique = [];
+    const seen = new Set();
+    for (const f of fontFaces) {
+        const key = [
+            f['font-family'],
+            f['font-weight'],
+            f['font-style'],
+            f['unicode-range'],
+            f.src,
+        ].join('|');
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(f);
+        }
+    }
+    if (unique.length === 0)
+        return;
+    const style = (0, utils_1.createElement)('style', { type: 'text/css' });
+    style.innerHTML = unique
+        .map((f) => `
+@font-face {
+  font-family: ${f['font-family']};
+  src: ${f.src};
+  font-style: ${f['font-style']};
+  font-weight: ${f['font-weight']};
+  font-display: ${f['font-display']};
+  unicode-range: ${f['unicode-range']};
+}
+`.trim())
+        .join('\n');
+    // 尽量插在 <defs> 后面，否则插在第一个子节点前
+    const defs = svg.querySelector('defs');
+    if (defs && defs.parentNode) {
+        defs.parentNode.insertBefore(style, defs.nextSibling);
+    }
+    else {
+        svg.insertBefore(style, svg.firstChild);
+    }
+}
+/**
+ * 加载 woff2 并转为 DataURL
+ */
+async function loadWoff2(url) {
+    const response = await (0, utils_1.fetchWithCache)(url);
+    if (!response.ok) {
+        throw new Error(`Failed to load font: ${url}`);
+    }
+    const blob = await response.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+    return dataUrl;
+}

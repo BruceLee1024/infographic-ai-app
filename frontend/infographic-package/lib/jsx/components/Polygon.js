@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Polygon = Polygon;
+function Polygon({ points = [], ...props }) {
+    const { x, y } = props;
+    const pointsStr = points.map(({ x, y }) => `${x},${y}`).join(' ');
+    const finalProps = {
+        ...props,
+        points: pointsStr,
+    };
+    if (x !== undefined || y !== undefined) {
+        finalProps.transform =
+            `translate(${x ?? 0}, ${y ?? 0})` + (finalProps.transform || '');
+    }
+    const node = {
+        type: 'polygon',
+        props: finalProps,
+    };
+    return node;
+}

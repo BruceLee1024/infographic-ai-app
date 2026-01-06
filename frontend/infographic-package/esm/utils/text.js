@@ -1,0 +1,190 @@
+import camelCase from 'lodash-es/camelCase';
+import { decodeFontFamily, encodeFontFamily } from './font';
+import { isForeignObjectElement } from './recognizer';
+import { createElement, setAttributes } from './svg';
+export function getTextEntity(text) {
+    if (!isForeignObjectElement(text))
+        return null;
+    return text.querySelector('span');
+}
+export function createTextElement(textContent, attributes) {
+    const entity = document.createElement('span');
+    const foreignObject = createElement('foreignObject', { overflow: 'visible' });
+    foreignObject.appendChild(entity);
+    updateTextElement(foreignObject, { textContent, attributes });
+    return foreignObject;
+}
+export function updateTextElement(text, props) {
+    const { textContent, attributes } = props;
+    if (textContent !== undefined) {
+        setTextContent(text, textContent);
+    }
+    if (!attributes)
+        return;
+    const entity = getTextEntity(text);
+    let { width, height } = attributes;
+    const textAttrs = {};
+    if (entity) {
+        Object.assign(entity.style, getTextStyle(attributes));
+        if (!width || !height) {
+            const rect = measureTextSpan(entity);
+            if (!width && !text.hasAttribute('width'))
+                width = String(rect.width);
+            if (!height && !text.hasAttribute('height'))
+                height = String(rect.height);
+        }
+        // 以下属性需要完成包围盒测量后再设置
+        const { 'data-horizontal-align': horizontal, 'data-vertical-align': vertical, } = attributes;
+        Object.assign(entity.style, alignToFlex(horizontal, vertical));
+    }
+    const { id, x, y } = attributes;
+    if (id)
+        textAttrs.id = id;
+    if (x !== undefined)
+        textAttrs.x = String(x);
+    if (y !== undefined)
+        textAttrs.y = String(y);
+    if (width !== undefined)
+        textAttrs.width = String(width);
+    if (height !== undefined)
+        textAttrs.height = String(height);
+    setAttributes(text, textAttrs);
+}
+function alignToFlex(horizontal, vertical) {
+    const style = {
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexWrap: 'wrap',
+        wordBreak: 'break-word',
+        whiteSpace: 'pre-wrap',
+    };
+    switch (horizontal) {
+        case 'LEFT':
+            style.textAlign = 'left';
+            style.justifyContent = 'flex-start';
+            break;
+        case 'CENTER':
+            style.textAlign = 'center';
+            style.justifyContent = 'center';
+            break;
+        case 'RIGHT':
+            style.textAlign = 'right';
+            style.justifyContent = 'flex-end';
+            break;
+    }
+    switch (vertical) {
+        case 'TOP':
+            style.alignContent = 'flex-start';
+            style.alignItems = 'flex-start';
+            break;
+        case 'MIDDLE':
+            style.alignContent = 'center';
+            style.alignItems = 'center';
+            break;
+        case 'BOTTOM':
+            style.alignContent = 'flex-end';
+            style.alignItems = 'flex-end';
+            break;
+    }
+    return style;
+}
+export function getTextStyle(attributes) {
+    const { x, y, width, height, ['data-horizontal-align']: horizontalAlign, // omit
+    ['data-vertical-align']: verticalAlign, // omit
+    ['font-size']: fontSize, ['letter-spacing']: letterSpacing, ['line-height']: lineHeight, fill, ['stroke-width']: strokeWidth, ['text-anchor']: textAnchor, // omit
+    ['dominant-baseline']: dominantBaseline, // omit
+    ['font-family']: fontFamily, ...restAttrs } = attributes;
+    const style = {
+        overflow: 'visible',
+        // userSelect: 'none',
+    };
+    if (fill)
+        style.color = fill;
+    Object.entries(restAttrs).forEach(([key, value]) => {
+        style[camelCase(key)] = value;
+    });
+    if (fontSize)
+        style.fontSize = `${fontSize}px`;
+    if (lineHeight)
+        style.lineHeight =
+            typeof lineHeight === 'string' && lineHeight.endsWith('px')
+                ? lineHeight
+                : +lineHeight;
+    if (letterSpacing)
+        style.letterSpacing = `${letterSpacing}px`;
+    if (strokeWidth)
+        style.strokeWidth = `${strokeWidth}px`;
+    style.fontFamily = fontFamily
+        ? encodeFontFamily(fontFamily)
+        : fontFamily || '';
+    return style;
+}
+function measureTextSpan(span) {
+    const parentNode = span.parentNode;
+    span.style.visibility = 'hidden';
+    document.body.appendChild(span);
+    const rect = span.getBoundingClientRect();
+    if (parentNode)
+        parentNode.appendChild(span);
+    else
+        document.body.removeChild(span);
+    span.style.visibility = 'visible';
+    return rect;
+}
+export function getTextContent(text) {
+    return getTextEntity(text)?.innerText || '';
+}
+export function setTextContent(text, content) {
+    const entity = getTextEntity(text);
+    if (entity) {
+        entity.innerText = content;
+    }
+}
+export function getTextElementProps(text) {
+    const entity = getTextEntity(text);
+    if (!entity)
+        return {};
+    const { color, fontSize, fontFamily, justifyContent, alignContent, fontWeight, } = entity.style;
+    const [horizontal, vertical] = flexToAlign(justifyContent, alignContent);
+    const attrs = {
+        'data-horizontal-align': horizontal,
+        'data-vertical-align': vertical,
+    };
+    if (fontFamily)
+        attrs['font-family'] = decodeFontFamily(fontFamily);
+    if (fontWeight)
+        attrs['font-weight'] = fontWeight;
+    if (fontSize)
+        attrs['font-size'] = String(parseInt(fontSize));
+    if (color)
+        attrs['fill'] = color;
+    return { attributes: attrs, textContent: getTextContent(text) };
+}
+function flexToAlign(justifyContent, alignContent) {
+    let horizontal = 'LEFT';
+    let vertical = 'TOP';
+    switch (justifyContent) {
+        case 'flex-start':
+            horizontal = 'LEFT';
+            break;
+        case 'center':
+            horizontal = 'CENTER';
+            break;
+        case 'flex-end':
+            horizontal = 'RIGHT';
+            break;
+    }
+    switch (alignContent) {
+        case 'flex-start':
+            vertical = 'TOP';
+            break;
+        case 'center':
+            vertical = 'MIDDLE';
+            break;
+        case 'flex-end':
+            vertical = 'BOTTOM';
+            break;
+    }
+    return [horizontal, vertical];
+}

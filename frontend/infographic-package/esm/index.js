@@ -1,0 +1,17 @@
+import pkg from '../package.json';
+export const VERSION = pkg.version;
+export * from './designs';
+export { getItemProps, getThemeColors } from './designs/utils';
+export { BrushSelect, ClickSelect, DblClickEditText, DragElement, HotkeyHistory, HotkeyManager, Interaction, SelectAll, SelectHighlight, ZoomWheel, } from './editor/interactions';
+export { EditBar, Plugin, ResizeElement } from './editor/plugins';
+export { Defs, Ellipse, Fragment, Group, Path, Polygon, Rect, Text, cloneElement, createFragment, createLayout, getCombinedBounds, getElementBounds, getElementsBounds, jsx, jsxDEV, jsxs, renderSVG, } from './jsx';
+export { getFont, getFonts, getPalette, getPaletteColor, registerFont, registerPalette, registerPattern, setDefaultFont, } from './renderer';
+export { loadSVGResource, registerResourceLoader } from './resource';
+export { clearPreloadCache, getPreloadedResource, getPreloadStats, isResourcePreloaded, preloadResource, preloadResources, } from './resource';
+export { Infographic } from './runtime';
+export { parseSyntax } from './syntax';
+export { getTemplate, getTemplates, registerTemplate } from './templates';
+export { getTheme, getThemes, registerTheme } from './themes';
+export { parseSVG } from './utils';
+// i18n 翻译
+export { getItemDisplayName, getStructureDisplayName, getTemplateDisplayName, getThemeDisplayName, ITEM_NAMES, STRUCTURE_NAMES, TEMPLATE_NAMES, THEME_NAMES, } from './i18n';

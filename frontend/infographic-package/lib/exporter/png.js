@@ -1,0 +1,45 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.exportToPNGString = exportToPNGString;
+const utils_1 = require("../utils");
+const svg_1 = require("./svg");
+async function exportToPNGString(svg, options = {}) {
+    const { dpr = globalThis.devicePixelRatio ?? 2 } = options;
+    const node = await (0, svg_1.exportToSVG)(svg);
+    const { width, height } = (0, utils_1.getViewBox)(node);
+    return new Promise((resolve, reject) => {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('Failed to get canvas context'));
+                return;
+            }
+            // 应用 DPR 缩放
+            ctx.scale(dpr, dpr);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            node.setAttribute('width', String(width));
+            node.setAttribute('height', String(height));
+            const updatedSvgData = new XMLSerializer().serializeToString(node);
+            const svgURL = 'data:image/svg+xml;charset=utf-8,' +
+                encodeURIComponent(updatedSvgData);
+            const img = new Image();
+            img.onload = function () {
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                const pngURL = canvas.toDataURL('image/png');
+                resolve(pngURL);
+            };
+            img.onerror = function (error) {
+                reject(new Error('Image load failed: ' + error));
+            };
+            img.src = svgURL;
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}

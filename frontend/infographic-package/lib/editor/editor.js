@@ -1,0 +1,54 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Editor = void 0;
+const managers_1 = require("./managers");
+class Editor {
+    constructor(emitter, document, options) {
+        this.emitter = emitter;
+        this.document = document;
+        this.options = options;
+        if (!document.isConnected) {
+            throw new Error('The provided document is not connected to the DOM.');
+        }
+        document.style.userSelect = 'none';
+        const commander = new managers_1.CommandManager();
+        const state = new managers_1.StateManager();
+        const plugin = new managers_1.PluginManager();
+        const interaction = new managers_1.InteractionManager();
+        commander.init({ state, emitter });
+        state.init({
+            emitter,
+            editor: this,
+            commander,
+            options,
+        });
+        plugin.init({
+            emitter,
+            editor: this,
+            commander,
+            state,
+        }, options.plugins);
+        interaction.init({
+            emitter,
+            editor: this,
+            commander,
+            state,
+            interactions: options.interactions,
+        });
+        this.commander = commander;
+        this.state = state;
+        this.plugin = plugin;
+        this.interaction = interaction;
+    }
+    getDocument() {
+        return this.document;
+    }
+    destroy() {
+        this.document.style.userSelect = '';
+        this.interaction.destroy();
+        this.plugin.destroy();
+        this.commander.destroy();
+        this.state.destroy();
+    }
+}
+exports.Editor = Editor;
