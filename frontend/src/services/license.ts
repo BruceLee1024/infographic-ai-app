@@ -90,8 +90,12 @@ export async function activateLicense(licenseKey: string): Promise<{
   license?: LicenseInfo;
 }> {
   try {
+    // 获取 API 基础 URL
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = apiUrl ? `${apiUrl}/api/license/activate` : '/api/license/activate';
+    
     // 调用后端 API 验证激活码
-    const response = await fetch('/api/license/activate', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
